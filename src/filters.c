@@ -345,8 +345,8 @@ static double bessel_i0(double x)
 static double kaiser(const struct pl_filter_ctx *f, double x)
 {
     double alpha = fmax(f->params[0], 0.0);
-    double scale = bessel_i0(alpha);
-    return bessel_i0(alpha * sqrt(1.0 - x * x)) / scale;
+    double scale = bessel_i0(alpha) - 1;
+    return (bessel_i0(alpha * sqrt(1.0 - x * x)) - 1) / scale;
 }
 
 const struct pl_filter_function pl_filter_function_kaiser = {
