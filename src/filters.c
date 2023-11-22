@@ -347,11 +347,11 @@ static double kaiser(const struct pl_filter_ctx *f, double x)
     double alpha = fmax(f->params[0], 0.0);
     double eps = fmin(fmax(f->params[1], 0.0), 1.0);
     double scale = bessel_i0(alpha);
-    k = bessel_i0(alpha * sqrt(1.0 - x * x)) / scale;
+    double k = bessel_i0(alpha * sqrt(1.0 - x * x)) / scale;
     if (x > 1.0 - eps) {
-        return k / (1.0 + exp(eps / (1.0 - x) - eps / (eps - 1.0 + x)))
+        return k / (1.0 + exp(eps / (1.0 - x) - eps / (eps - (1.0 - x))));
     } else {
-        return k
+        return k;
     }
 }
 
