@@ -345,16 +345,22 @@ static double bessel_i0(double x)
 static double kaiser(const struct pl_filter_ctx *f, double x)
 {
     double alpha = fmax(f->params[0], 0.0);
-    double scale = bessel_i0(alpha) - 1;
-    return (bessel_i0(alpha * sqrt(1.0 - x * x)) - 1) / scale;
+    double eps = fmin(fmax(f->params[1], 0.0), 1.0);
+    double scale = bessel_i0(alpha);
+    k = bessel_i0(alpha * sqrt(1.0 - x * x)) / scale;
+    if (x > 1.0 - eps) {
+        return k / (1.0 + exp(eps / (1.0 - x) - eps / (eps - 1.0 + x)))
+    } else {
+        return k
+    }
 }
 
 const struct pl_filter_function pl_filter_function_kaiser = {
     .name    = "kaiser",
     .weight  = kaiser,
     .radius  = 1.0,
-    .params  = {2.0},
-    .tunable = {true},
+    .params  = {2.0, 0.0},
+    .tunable = {true, true},
 };
 
 //Power of Blackman window
