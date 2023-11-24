@@ -363,6 +363,20 @@ const struct pl_filter_function pl_filter_function_kaiser = {
     .tunable = {true, true},
 };
 
+static double mises(const struct pl_filter_ctx *f, double x)
+{
+    double beta = fmax(f->params[0], 0.0);
+    return exp(beta * cos(0.5 * M_PI * x) - beta);
+}
+
+const struct pl_filter_function pl_filter_function_mises = {
+    .name    = "mises",
+    .weight  = mises,
+    .radius  = 1.0,
+    .params  = {1.0},
+    .tunable = {true},
+};
+
 //Power of Blackman window
 static double blackman(const struct pl_filter_ctx *f, double x)
 {
