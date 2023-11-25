@@ -328,18 +328,35 @@ const struct pl_filter_function pl_filter_function_welch = {
     .radius = 1.0,
 };
 
+static const double bessel_i0_coefs[15] =
+{
+    2.0941557335286373e-22,
+    2.1859737023077178e-20,
+    4.470993793303175e-18,
+    6.255282299620455e-16,
+    7.596677643342155e-14,
+    7.593827956729909e-12,
+    6.151201574092085e-10,
+    3.9367592765038015e-8,
+    1.9290123635366806e-6,
+    6.94444444107536e-5,
+    0.001736111111149161,
+    0.027777777777755364,
+    0.2500000000000052,
+    0.9999999999999998,
+    1.0
+};
+
 static double bessel_i0(double x)
 {
-    double s = 1.0;
-    double y = x * x / 4.0;
-    double t = y;
-    int i = 2;
-    while (t > 1e-12) {
-        s += t;
-        t *= y / (i * i);
-        i += 1;
+    double a = x * x / 4;
+    double b = bessel_i0_coefs[0];
+    
+    for (int i = 1; i < 15; i++) {
+        b = fma(a, b, bessel_i0_coefs[i]);
     }
-    return s;
+    
+    return b;
 }
 
 static double kaiser(const struct pl_filter_ctx *f, double x)
@@ -358,6 +375,58 @@ static double kaiser(const struct pl_filter_ctx *f, double x)
 const struct pl_filter_function pl_filter_function_kaiser = {
     .name    = "kaiser",
     .weight  = kaiser,
+    .radius  = 1.0,
+    .params  = {2.0, 0.0},
+    .tunable = {true, true},
+};
+
+static const double bessel_i1_coefs[15] =
+{
+    1.3161876924566675e-23,
+    1.6398527256182257e-21,
+    3.405120412140281e-19,
+    5.2213850252454655e-17,
+    6.904652315442046e-15,
+    7.593985414952446e-13,
+    6.834656365321179e-11,
+    4.920949730519126e-9,
+    2.7557319253050506e-7,
+    1.1574074073690356e-5,
+    0.00034722222222248526,
+    0.006944444444444374,
+    0.08333333333333334,
+    0.5,
+    1.0
+};
+
+static double bessel_i1(double x)
+{
+    double a = x * x / 4;
+    double b = bessel_i1_coefs[0];
+    
+    for (int i = 1; i < 15; i++) {
+        b = fma(a, b, bessel_i1_coefs[i]);
+    }
+    
+    return x * b / 2;
+}
+
+static double kaiser1(const struct pl_filter_ctx *f, double x)
+{
+    double alpha = fmax(f->params[0], 0.0);
+    double eps = fmin(fmax(f->params[1], 0.0), 1.0);
+    double scale = bessel_i1(alpha);
+    double k = sqrt(1.0 - x * x) * bessel_i1(alpha * sqrt(1.0 - x * x)) / scale;
+    if (x > 1.0 - eps) {
+        return k / (1.0 + exp(eps / (1.0 - x) - eps / (eps - (1.0 - x))));
+    } else {
+        return k;
+    }
+}
+
+const struct pl_filter_function pl_filter_function_kaiser1 = {
+    .name    = "kaiser1",
+    .weight  = kaiser1,
     .radius  = 1.0,
     .params  = {2.0, 0.0},
     .tunable = {true, true},
@@ -658,6 +727,7 @@ const struct pl_filter_function * const pl_filter_functions[] = {
     &pl_filter_function_hamming,
     &pl_filter_function_welch,
     &pl_filter_function_kaiser,
+    &pl_filter_function_kaiser1,
     &pl_filter_function_mises,
     &pl_filter_function_blackman,
     &pl_filter_function_bohman,
@@ -1036,6 +1106,7 @@ const struct pl_filter_function_preset pl_filter_function_presets[] = {
     {"hamming",         &pl_filter_function_hamming},
     {"welch",           &pl_filter_function_welch},
     {"kaiser",          &pl_filter_function_kaiser},
+    {"kaiser1",         &pl_filter_function_kaiser1},
     {"mises",           &pl_filter_function_mises},
     {"blackman",        &pl_filter_function_blackman},
     {"bohman",          &pl_filter_function_bohman},
