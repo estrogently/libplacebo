@@ -458,7 +458,7 @@ static double taylor(const struct pl_filter_ctx *f, double x)
     return taylor_inner(x, dbc, d) / taylor_inner(0, dbc, d);
 }
 
-const struct pl_filter_function pl_filter_function_kaiser1 = {
+const struct pl_filter_function pl_filter_function_taylor = {
     .name    = "taylor",
     .weight  = taylor,
     .radius  = 0.5,
