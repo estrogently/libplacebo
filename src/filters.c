@@ -414,21 +414,55 @@ static double bessel_i1(double x)
 static double kaiser1(const struct pl_filter_ctx *f, double x)
 {
     double alpha = fmax(f->params[0], 0.0);
-    double eps = fmin(fmax(f->params[1], 0.0), 1.0);
-    double scale = bessel_i1(alpha);
-    double k = sqrt(1.0 - x * x) * bessel_i1(alpha * sqrt(1.0 - x * x)) / scale;
-    if (x > 1.0 - eps) {
-        return k / (1.0 + exp(eps / (1.0 - x) - eps / (eps - (1.0 - x))));
-    } else {
-        return k;
-    }
+    double scale = bessel_i1(alpha) * sqrt(1.0 - x * x);
+    return bessel_i1(alpha * sqrt(1.0 - x * x)) / scale;
 }
 
 const struct pl_filter_function pl_filter_function_kaiser1 = {
     .name    = "kaiser1",
     .weight  = kaiser1,
     .radius  = 1.0,
-    .params  = {2.0, 0.0},
+    .params  = {2.0},
+    .tunable = {true},
+};
+
+static double taylor_inner(double x, double dbc, double d)
+{
+    double a = pow(acosh(pow(10.0, -dbc/20.0)) / M_PI, 2.0);
+    double s = pow(d, 2.0) / (a + pow(d - 0.5, 2.0));
+    double sum = 1.0;
+    
+    for (int m = 1; m < round(d); m++) {
+        double num = -pow(-1.0, m);
+        double denom = 1.0;
+        
+        for (int n = 1; n < round(d); n++) {
+            num *= 1.0 - (pow(m, 2.0) / s) / (a + pow(n - 0.5, 2.0));
+            if (n != m) {
+                denom *= 1.0 - pow(m, 2.0) / pow(n, 2.0);
+            }
+        }
+        
+        num /= denom;
+        num *= cos(2.0 * M_PI * m * x);
+        sum += num;
+    }
+    
+    return sum;
+}
+
+static double taylor(const struct pl_filter_ctx *f, double x)
+{
+    double dbc = f->params[0];
+    double d = f->params[1];
+    return taylor_inner(x, dbc, d) / taylor_inner(0, dbc, d);
+}
+
+const struct pl_filter_function pl_filter_function_kaiser1 = {
+    .name    = "taylor",
+    .weight  = taylor,
+    .radius  = 0.5,
+    .params  = {-15.0, 1.5},
     .tunable = {true, true},
 };
 
@@ -728,6 +762,7 @@ const struct pl_filter_function * const pl_filter_functions[] = {
     &pl_filter_function_welch,
     &pl_filter_function_kaiser,
     &pl_filter_function_kaiser1,
+    &pl_filter_function_taylor,
     &pl_filter_function_mises,
     &pl_filter_function_blackman,
     &pl_filter_function_bohman,
@@ -1107,6 +1142,7 @@ const struct pl_filter_function_preset pl_filter_function_presets[] = {
     {"welch",           &pl_filter_function_welch},
     {"kaiser",          &pl_filter_function_kaiser},
     {"kaiser1",         &pl_filter_function_kaiser1},
+    {"taylor",          &pl_filter_function_taylor},
     {"mises",           &pl_filter_function_mises},
     {"blackman",        &pl_filter_function_blackman},
     {"bohman",          &pl_filter_function_bohman},
